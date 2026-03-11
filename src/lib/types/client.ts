@@ -30,6 +30,7 @@ export interface AdminClientDetail extends AdminClientListItem {
   primaryContactEmail: string | null;
   primaryContactPhone: string | null;
   brandColor: string | null;
+  logoUrl: string | null;
   integrations: IntegrationSettings | null;
   users: ClientUser[];
 }
@@ -43,12 +44,18 @@ export interface IntegrationSettings {
   bccRecipients: string[];
   includeJsonAttachment: boolean;
   includeReportLink: boolean;
+  policyholderEmailEnabled: boolean;
+  policyholderEmailUseCustomDomain: boolean;
+  policyholderEmailFrom: string | null;
+  policyholderMaxRetries: number;
+  policyholderDeadLetterEmail: string | null;
   pricePerCall: number;
   baseMonthlyFee: number | null;
   minimumMonthlyCharge: number | null;
   implementationFee: number | null;
   freeTrialLimit: number | null;
   fnolSchema: FnolSchema | null;
+  fnolWebhookSecret?: string;
   twilioIncomingNumber: string | null;
   elevenlabsVoiceId: string | null;
   elevenlabsAgentId: string | null;
@@ -105,6 +112,7 @@ export interface CreateClientInput {
   ccRecipients?: string;
   bccRecipients?: string;
   brandColor?: string;
+  logoUrl?: string;
   fnolSchema?: FnolSchema;
   elevenlabsAgentId?: string;
   guidewireEndpoint?: string;
@@ -128,6 +136,7 @@ export interface UpdateClientInput {
   primaryContactEmail?: string;
   claimsInboxEmail?: string;
   brandColor?: string;
+  logoUrl?: string | null;
   billingProvider?: BillingProvider;
 }
 
