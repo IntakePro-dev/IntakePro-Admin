@@ -290,6 +290,7 @@ export default function IntegrationsPage() {
         includeJsonAttachment: email.includeJsonAttachment,
         includeReportLink: email.includeReportLink,
         twilioIncomingNumber: phone.twilioIncomingNumber || undefined,
+        fnolWebhookSecret: phone.webhookSecret || undefined,
       });
       toast.success("Integrations saved");
     } catch (error) {

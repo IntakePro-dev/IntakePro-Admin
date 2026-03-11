@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import type {
   AdminClientListItem,
   AdminClientDetail,
@@ -20,10 +21,38 @@ function getToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function generateRequestId(): string {
+  return uuidv4();
+}
+
+class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+class RateLimitError extends Error {
+  constructor() {
+    super("Too many requests. Please wait a moment and try again.");
+    this.name = "RateLimitError";
+  }
+}
+
+function handleAuthRedirect() {
+  if (typeof document !== "undefined") {
+    document.cookie = "admin_token=; path=/; max-age=0";
+    window.location.href = "/login?error=session_expired";
+  }
+}
+
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
+  const requestId = generateRequestId();
+  
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "X-Request-ID": requestId,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...init?.headers,
   };
@@ -35,6 +64,15 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      handleAuthRedirect();
+      throw new AuthError("Session expired. Please log in again.");
+    }
+    
+    if (res.status === 429) {
+      throw new RateLimitError();
+    }
+
     const data = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(data?.error || `Request failed (${res.status})`);
   }
@@ -42,18 +80,28 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export { AuthError, RateLimitError };
+
 // Auth
 export async function login(
   email: string,
   password: string
 ): Promise<{ token: string; user: { id: string; email: string; role: string } }> {
+  const requestId = generateRequestId();
+  
   const res = await fetch(`${API_URL}/api/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "X-Request-ID": requestId,
+    },
     body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new RateLimitError();
+    }
     const data = await res.json().catch(() => ({ error: "Login failed" }));
     throw new Error(data?.error || "Invalid credentials");
   }
@@ -177,7 +225,7 @@ export async function deleteAdminClientUser(
 // Client Integrations
 export async function updateAdminClientIntegrations(
   clientId: string,
-  input: Partial<IntegrationSettings> & { elevenlabsApiKey?: string; guidewireApiKey?: string; guidewireOauthClientSecret?: string }
+  input: Partial<IntegrationSettings> & { elevenlabsApiKey?: string; guidewireApiKey?: string; guidewireOauthClientSecret?: string; fnolWebhookSecret?: string }
 ): Promise<void> {
   await adminFetch(`/api/admin/clients/${clientId}/integrations`, {
     method: "PUT",
@@ -339,12 +387,24 @@ export async function exportAuditLogs(params: ExportParams): Promise<string> {
   if (params.limit) searchParams.set("limit", String(params.limit));
 
   const token = getToken();
+  const requestId = generateRequestId();
+  
   const res = await fetch(`${API_URL}/api/audit/export?${searchParams.toString()}`, {
     credentials: "include",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      "X-Request-ID": requestId,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      handleAuthRedirect();
+      throw new AuthError("Session expired. Please log in again.");
+    }
+    if (res.status === 429) {
+      throw new RateLimitError();
+    }
     throw new Error("Export failed");
   }
 

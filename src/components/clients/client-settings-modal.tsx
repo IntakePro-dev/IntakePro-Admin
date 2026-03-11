@@ -82,6 +82,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     primaryContactEmail: "",
     primaryContactPhone: "",
     brandColor: "#4B7BD9",
+    logoUrl: "",
   });
 
   const [emailSettings, setEmailSettings] = useState({
@@ -91,6 +92,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     bccRecipients: "",
     includeJsonAttachment: false,
     includeReportLink: true,
+  });
+
+  const [policyholderEmailSettings, setPolicyholderEmailSettings] = useState({
+    enabled: true,
+    useCustomDomain: false,
+    fromAddress: "",
+    deadLetterEmail: "",
   });
 
   const [billingSettings, setBillingSettings] = useState({
@@ -130,6 +138,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         primaryContactEmail: client.primaryContactEmail || "",
         primaryContactPhone: client.primaryContactPhone || "",
         brandColor: client.brandColor || "#4B7BD9",
+        logoUrl: client.logoUrl || "",
       });
 
       if (client.integrations) {
@@ -140,6 +149,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
           bccRecipients: client.integrations.bccRecipients?.join(", ") || "",
           includeJsonAttachment: client.integrations.includeJsonAttachment,
           includeReportLink: client.integrations.includeReportLink,
+        });
+
+        setPolicyholderEmailSettings({
+          enabled: client.integrations.policyholderEmailEnabled ?? true,
+          useCustomDomain: client.integrations.policyholderEmailUseCustomDomain ?? false,
+          fromAddress: client.integrations.policyholderEmailFrom || "",
+          deadLetterEmail: client.integrations.policyholderDeadLetterEmail || "",
         });
 
         setBillingSettings({
@@ -200,6 +216,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         primaryContactEmail: formData.primaryContactEmail || undefined,
         primaryContactPhone: formData.primaryContactPhone || undefined,
         brandColor: formData.brandColor || undefined,
+        logoUrl: formData.logoUrl || null,
       });
 
       await updateIntegrations.mutateAsync({
@@ -213,6 +230,10 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
           : [],
         includeJsonAttachment: emailSettings.includeJsonAttachment,
         includeReportLink: emailSettings.includeReportLink,
+        policyholderEmailEnabled: policyholderEmailSettings.enabled,
+        policyholderEmailUseCustomDomain: policyholderEmailSettings.useCustomDomain,
+        policyholderEmailFrom: policyholderEmailSettings.fromAddress || undefined,
+        policyholderDeadLetterEmail: policyholderEmailSettings.deadLetterEmail || undefined,
         pricePerCall: billingSettings.pricePerCall,
         baseMonthlyFee: billingSettings.baseMonthlyFee || undefined,
         minimumMonthlyCharge: billingSettings.minimumMonthlyCharge || undefined,
@@ -237,6 +258,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
           ? JSON.parse(integrationSettings.guidewirePayloadSchema)
           : undefined,
         fnolSchema: { version: 1, fields: fnolFields.filter((f) => f.enabled) },
+        fnolWebhookSecret: integrationSettings.fnolWebhookSecret || undefined,
       });
 
       toast.success("Settings saved");
@@ -408,6 +430,32 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                       </div>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="logoUrl">Logo URL</Label>
+                    <Input
+                      id="logoUrl"
+                      type="url"
+                      placeholder="https://example.com/logo.png"
+                      value={formData.logoUrl}
+                      onChange={(e) => setFormData((p) => ({ ...p, logoUrl: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL to the client&apos;s logo image. Displayed in their portal sidebar.
+                    </p>
+                    {formData.logoUrl && (
+                      <div className="mt-2 p-2 border rounded-md bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                        <img 
+                          src={formData.logoUrl} 
+                          alt="Logo preview" 
+                          className="h-8 w-auto object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </section>
 
@@ -468,6 +516,71 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                       checked={emailSettings.includeReportLink}
                       onCheckedChange={(checked) => setEmailSettings((p) => ({ ...p, includeReportLink: checked }))}
                     />
+                  </div>
+                </div>
+              </section>
+
+              <Separator />
+
+              <section>
+                <h3 className="text-lg font-semibold mb-4">Policyholder Confirmation</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="policyholderEnabled">Enable Confirmation Emails</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Send confirmation emails to policyholders after FNOL submission
+                      </p>
+                    </div>
+                    <Switch
+                      id="policyholderEnabled"
+                      checked={policyholderEmailSettings.enabled}
+                      onCheckedChange={(checked) => setPolicyholderEmailSettings((p) => ({ ...p, enabled: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="policyholderUseCustomDomain">Use Custom Domain</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Send from client&apos;s own verified email domain via Resend
+                      </p>
+                    </div>
+                    <Switch
+                      id="policyholderUseCustomDomain"
+                      checked={policyholderEmailSettings.useCustomDomain}
+                      onCheckedChange={(checked) => setPolicyholderEmailSettings((p) => ({ ...p, useCustomDomain: checked }))}
+                      disabled={!policyholderEmailSettings.enabled}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="policyholderFromAddress">From Address</Label>
+                    <Input
+                      id="policyholderFromAddress"
+                      type="email"
+                      placeholder="noreply@clientdomain.com"
+                      value={policyholderEmailSettings.fromAddress}
+                      onChange={(e) => setPolicyholderEmailSettings((p) => ({ ...p, fromAddress: e.target.value }))}
+                      disabled={!policyholderEmailSettings.enabled || !policyholderEmailSettings.useCustomDomain}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {policyholderEmailSettings.useCustomDomain
+                        ? "Domain must be verified in Resend"
+                        : "Enable custom domain to use a custom from address"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="policyholderDeadLetterEmail">Failure Notification Email</Label>
+                    <Input
+                      id="policyholderDeadLetterEmail"
+                      type="email"
+                      placeholder="admin@clientdomain.com"
+                      value={policyholderEmailSettings.deadLetterEmail}
+                      onChange={(e) => setPolicyholderEmailSettings((p) => ({ ...p, deadLetterEmail: e.target.value }))}
+                      disabled={!policyholderEmailSettings.enabled}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Receive notifications when confirmation emails fail after max retries
+                    </p>
                   </div>
                 </div>
               </section>
