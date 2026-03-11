@@ -137,6 +137,9 @@ export default function ClientDetailPage() {
           <TabsTrigger value="integrations" asChild>
             <Link href={`/clients/${clientId}/integrations`}>Client Configuration</Link>
           </TabsTrigger>
+          <TabsTrigger value="report-template" asChild>
+            <Link href={`/clients/${clientId}/report-template`}>Report Template</Link>
+          </TabsTrigger>
           <TabsTrigger value="billing" asChild>
             <Link href={`/clients/${clientId}/billing`}>Billing & Usage</Link>
           </TabsTrigger>

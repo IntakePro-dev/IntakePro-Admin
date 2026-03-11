@@ -381,6 +381,29 @@ export async function verifyAuditChain(clientId?: string): Promise<VerifyRespons
   return adminFetch<VerifyResponse>(`/api/audit/verify${params}`);
 }
 
+// Report Templates
+import type { ReportTemplate, ReportTemplateResponse } from "@/lib/types/report-template";
+
+export async function getClientReportTemplate(clientId: string): Promise<ReportTemplateResponse> {
+  return adminFetch<ReportTemplateResponse>(`/api/admin/clients/${clientId}/report-template`);
+}
+
+export async function updateClientReportTemplate(
+  clientId: string,
+  template: ReportTemplate
+): Promise<{ success: true; template: ReportTemplate }> {
+  return adminFetch(`/api/admin/clients/${clientId}/report-template`, {
+    method: "PUT",
+    body: JSON.stringify({ template }),
+  });
+}
+
+export async function resetClientReportTemplate(clientId: string): Promise<{ success: true }> {
+  return adminFetch(`/api/admin/clients/${clientId}/report-template`, {
+    method: "DELETE",
+  });
+}
+
 export async function exportAuditLogs(params: ExportParams): Promise<string> {
   const searchParams = new URLSearchParams();
   if (params.clientId) searchParams.set("clientId", params.clientId);
