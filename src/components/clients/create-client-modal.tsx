@@ -93,35 +93,31 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
   }
 
   async function handleCreate() {
-    const input = {
+    const input: CreateClientInput = {
       name: formData.name,
       legalName: formData.legalName,
       status: formData.status,
-      lineOfBusiness: formData.lineOfBusiness,
+      lineOfBusiness: formData.lineOfBusiness as LineOfBusiness,
       timezone: formData.timezone,
       displayName: formData.displayName,
       primaryContactName: formData.primaryContactName,
       primaryContactPhone: formData.primaryContactPhone,
       primaryContactEmail: formData.primaryContactEmail,
+      claimsInboxEmail: formData.claimsInboxEmail,
+      ccRecipients: formData.ccRecipients || undefined,
+      bccRecipients: formData.bccRecipients || undefined,
       brandColor: formData.brandColor,
       logoUrl: formData.logoUrl || undefined,
-      integrations: {
-        emailEnabled: true,
-        claimsInboxEmail: formData.claimsInboxEmail || undefined,
-        ccRecipients: formData.ccRecipients ? formData.ccRecipients.split(",").map(e => e.trim()).filter(Boolean) : [],
-        bccRecipients: formData.bccRecipients ? formData.bccRecipients.split(",").map(e => e.trim()).filter(Boolean) : [],
-        elevenlabsAgentId: formData.elevenlabsAgentId || undefined,
-        guidewireEnabled: !!formData.guidewireEndpoint,
-        guidewireEndpoint: formData.guidewireEndpoint || undefined,
-        pricePerCall: formData.pricePerCall,
-        baseMonthlyFee: formData.baseMonthlyFee || undefined,
-        minimumMonthlyCharge: formData.minimumMonthlyCharge || undefined,
-        freeTrialLimit: formData.status === "TRIAL" ? formData.freeTrialLimit : undefined,
-      },
+      elevenlabsAgentId: formData.elevenlabsAgentId || undefined,
+      guidewireEndpoint: formData.guidewireEndpoint || undefined,
+      pricePerCall: formData.pricePerCall,
+      baseMonthlyFee: formData.baseMonthlyFee || undefined,
+      minimumMonthlyCharge: formData.minimumMonthlyCharge || undefined,
+      freeTrialLimit: formData.status === "TRIAL" ? formData.freeTrialLimit : undefined,
     };
 
     try {
-      const result = await createClient.mutateAsync(input as CreateClientInput);
+      const result = await createClient.mutateAsync(input);
       toast.success("Client created successfully");
       onOpenChange(false);
       router.push(`/clients/${result.id}`);
