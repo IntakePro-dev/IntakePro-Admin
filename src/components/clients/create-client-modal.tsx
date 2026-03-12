@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCreateClient } from "@/hooks/use-admin-clients";
 import { toast } from "sonner";
-import type { CreateClientInput, FnolField, ClientStatus, LineOfBusiness } from "@/lib/types/client";
+import type { CreateClientInput, ClientStatus, LineOfBusiness } from "@/lib/types/client";
 import { cn } from "@/lib/utils";
 
 interface CreateClientModalProps {
@@ -43,23 +43,11 @@ const TIMEZONES = [
   "America/Halifax",
 ];
 
-const DEFAULT_FNOL_FIELDS: FnolField[] = [
-  { key: "caller.name", label: "Caller name", path: "caller.name", required: true, enabled: true },
-  { key: "caller.callbackNumber", label: "Callback number", path: "caller.callbackNumber", required: true, enabled: true },
-  { key: "policy.policyNumber", label: "Policy number", path: "policy.policyNumber", required: true, enabled: true },
-  { key: "loss.dateTime", label: "Date/time of incident", path: "loss.dateTime", required: true, enabled: true },
-  { key: "loss.address", label: "Address of loss", path: "loss.address", required: true, enabled: true },
-  { key: "loss.type", label: "Type of loss", path: "loss.type", required: true, enabled: true },
-  { key: "damage.summary", label: "Description / summary", path: "damage.summary", required: true, enabled: true },
-  { key: "damage.emergencyWorkNeeded", label: "Emergency work needed", path: "damage.emergencyWorkNeeded", required: true, enabled: true },
-];
-
 const steps = [
   { id: 1, title: "Company Info" },
   { id: 2, title: "Contact & Branding" },
-  { id: 3, title: "FNOL Template" },
-  { id: 4, title: "Integrations & Billing" },
-  { id: 5, title: "Review & Create" },
+  { id: 3, title: "Integrations & Billing" },
+  { id: 4, title: "Review & Create" },
 ];
 
 function generateClientId() {
@@ -86,6 +74,7 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
     ccRecipients: "",
     bccRecipients: "",
     brandColor: "#4B7BD9",
+    logoUrl: "",
     elevenlabsAgentId: "",
     guidewireEndpoint: "",
     guidewireApiToken: "",
@@ -96,9 +85,6 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
     freeTrialLimit: 0,
   });
 
-  const [fnolFields, setFnolFields] = useState<FnolField[]>(DEFAULT_FNOL_FIELDS);
-  const [customFields, setCustomFields] = useState<FnolField[]>([]);
-
   function updateFormData<K extends keyof typeof formData>(
     key: K,
     value: (typeof formData)[K]
@@ -106,64 +92,36 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
-  function toggleFnolField(key: string, field: "enabled" | "required") {
-    setFnolFields((prev) =>
-      prev.map((f) => (f.key === key ? { ...f, [field]: !f[field] } : f))
-    );
-  }
-
-  function addCustomField() {
-    const newField: FnolField = {
-      key: `custom_${Date.now()}`,
-      label: "",
-      path: "",
-      required: false,
-      enabled: true,
-      custom: true,
-    };
-    setCustomFields((prev) => [...prev, newField]);
-  }
-
-  function updateCustomField(index: number, updates: Partial<FnolField>) {
-    setCustomFields((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, ...updates } : f))
-    );
-  }
-
-  function removeCustomField(index: number) {
-    setCustomFields((prev) => prev.filter((_, i) => i !== index));
-  }
-
   async function handleCreate() {
-    const allFields = [...fnolFields.filter((f) => f.enabled), ...customFields.filter((f) => f.enabled && f.label)];
-
-    const input: CreateClientInput = {
+    const input = {
       name: formData.name,
       legalName: formData.legalName,
       status: formData.status,
-      lineOfBusiness: formData.lineOfBusiness as LineOfBusiness,
+      lineOfBusiness: formData.lineOfBusiness,
       timezone: formData.timezone,
       displayName: formData.displayName,
       primaryContactName: formData.primaryContactName,
       primaryContactPhone: formData.primaryContactPhone,
       primaryContactEmail: formData.primaryContactEmail,
-      claimsInboxEmail: formData.claimsInboxEmail,
-      ccRecipients: formData.ccRecipients,
-      bccRecipients: formData.bccRecipients,
       brandColor: formData.brandColor,
-      fnolSchema: { version: 1, fields: allFields },
-      elevenlabsAgentId: formData.elevenlabsAgentId || undefined,
-      guidewireEndpoint: formData.guidewireEndpoint || undefined,
-      guidewireApiToken: formData.guidewireApiToken || undefined,
-      fnolDeliveryMethod: formData.fnolDeliveryMethod,
-      pricePerCall: formData.pricePerCall,
-      baseMonthlyFee: formData.baseMonthlyFee || undefined,
-      minimumMonthlyCharge: formData.minimumMonthlyCharge || undefined,
-      freeTrialLimit: formData.status === "TRIAL" ? formData.freeTrialLimit : undefined,
+      logoUrl: formData.logoUrl || undefined,
+      integrations: {
+        emailEnabled: true,
+        claimsInboxEmail: formData.claimsInboxEmail || undefined,
+        ccRecipients: formData.ccRecipients ? formData.ccRecipients.split(",").map(e => e.trim()).filter(Boolean) : [],
+        bccRecipients: formData.bccRecipients ? formData.bccRecipients.split(",").map(e => e.trim()).filter(Boolean) : [],
+        elevenlabsAgentId: formData.elevenlabsAgentId || undefined,
+        guidewireEnabled: !!formData.guidewireEndpoint,
+        guidewireEndpoint: formData.guidewireEndpoint || undefined,
+        pricePerCall: formData.pricePerCall,
+        baseMonthlyFee: formData.baseMonthlyFee || undefined,
+        minimumMonthlyCharge: formData.minimumMonthlyCharge || undefined,
+        freeTrialLimit: formData.status === "TRIAL" ? formData.freeTrialLimit : undefined,
+      },
     };
 
     try {
-      const result = await createClient.mutateAsync(input);
+      const result = await createClient.mutateAsync(input as CreateClientInput);
       toast.success("Client created successfully");
       onOpenChange(false);
       router.push(`/clients/${result.id}`);
@@ -179,10 +137,8 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
       case 2:
         return formData.primaryContactName && formData.primaryContactPhone && formData.primaryContactEmail && formData.claimsInboxEmail && formData.displayName;
       case 3:
-        return true;
-      case 4:
         return formData.pricePerCall > 0;
-      case 5:
+      case 4:
         return true;
       default:
         return false;
@@ -397,86 +353,24 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Input
+                id="logoUrl"
+                type="url"
+                placeholder="https://example.com/logo.png"
+                value={formData.logoUrl}
+                onChange={(e) => updateFormData("logoUrl", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                URL to the client&apos;s logo image. Displayed in their portal sidebar.
+              </p>
+            </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Configure which fields the AI will collect during FNOL calls.
-            </p>
-
-            <div className="space-y-2">
-              {fnolFields.map((field) => (
-                <div
-                  key={field.key}
-                  className="flex items-center justify-between p-3 rounded-md border"
-                >
-                  <div>
-                    <p className="font-medium">{field.label}</p>
-                    <p className="text-xs text-muted-foreground">{field.path}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={field.enabled}
-                        onCheckedChange={() => toggleFnolField(field.key, "enabled")}
-                      />
-                      <span className="text-sm">Enabled</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={field.required}
-                        onCheckedChange={() => toggleFnolField(field.key, "required")}
-                        disabled={!field.enabled}
-                      />
-                      <span className="text-sm">Required</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {customFields.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Custom Fields</p>
-                {customFields.map((field, index) => (
-                  <div key={field.key} className="flex items-center gap-2 p-3 rounded-md border">
-                    <Input
-                      placeholder="Label"
-                      value={field.label}
-                      onChange={(e) => updateCustomField(index, { label: e.target.value })}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Key"
-                      value={field.path}
-                      onChange={(e) => updateCustomField(index, { path: `details.custom.${e.target.value}`, key: e.target.value })}
-                      className="flex-1"
-                    />
-                    <Switch
-                      checked={field.required}
-                      onCheckedChange={(checked) => updateCustomField(index, { required: checked })}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeCustomField(index)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button variant="outline" onClick={addCustomField}>
-              Add Custom Field
-            </Button>
-          </div>
-        )}
-
-        {step === 4 && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -579,7 +473,7 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
           </div>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Review the information below before creating the client.
@@ -633,28 +527,14 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
                     />
                     {formData.brandColor}
                   </div>
-                </div>
-              </div>
-
-              <div className="rounded-md border p-4">
-                <h4 className="font-medium mb-2">FNOL Fields</h4>
-                <div className="flex flex-wrap gap-2">
-                  {fnolFields.filter((f) => f.enabled).map((f) => (
-                    <span
-                      key={f.key}
-                      className="px-2 py-1 bg-muted rounded text-xs"
-                    >
-                      {f.label} {f.required && "*"}
-                    </span>
-                  ))}
-                  {customFields.filter((f) => f.enabled && f.label).map((f) => (
-                    <span
-                      key={f.key}
-                      className="px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded text-xs"
-                    >
-                      {f.label} {f.required && "*"} (custom)
-                    </span>
-                  ))}
+                  {formData.logoUrl && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Logo:</span>{" "}
+                      <a href={formData.logoUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                        {formData.logoUrl}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -695,7 +575,7 @@ export function CreateClientModal({ open, onOpenChange }: CreateClientModalProps
             Back
           </Button>
 
-          {step < 5 ? (
+          {step < 4 ? (
             <Button onClick={() => setStep((s) => s + 1)} disabled={!canProceed()}>
               Next
               <ChevronRight className="ml-2 h-4 w-4" />

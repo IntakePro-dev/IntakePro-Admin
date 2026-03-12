@@ -31,7 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, ChevronDown, Trash2 } from "lucide-react";
 import { useUpdateClient, useDeleteClient, useUpdateClientIntegrations } from "@/hooks/use-admin-client";
 import { toast } from "sonner";
-import type { AdminClientDetail, ClientStatus, LineOfBusiness, FnolField } from "@/lib/types/client";
+import type { AdminClientDetail, ClientStatus, LineOfBusiness } from "@/lib/types/client";
 
 interface ClientSettingsModalProps {
   client: AdminClientDetail;
@@ -49,17 +49,6 @@ const TIMEZONES = [
   "America/Edmonton",
   "America/Winnipeg",
   "America/Halifax",
-];
-
-const DEFAULT_FNOL_FIELDS: FnolField[] = [
-  { key: "caller.name", label: "Caller name", path: "caller.name", required: true, enabled: true },
-  { key: "caller.callbackNumber", label: "Callback number", path: "caller.callbackNumber", required: true, enabled: true },
-  { key: "policy.policyNumber", label: "Policy number", path: "policy.policyNumber", required: true, enabled: true },
-  { key: "loss.dateTime", label: "Date/time of incident", path: "loss.dateTime", required: true, enabled: true },
-  { key: "loss.address", label: "Address of loss", path: "loss.address", required: true, enabled: true },
-  { key: "loss.type", label: "Type of loss", path: "loss.type", required: true, enabled: true },
-  { key: "damage.summary", label: "Description / summary", path: "damage.summary", required: true, enabled: true },
-  { key: "damage.emergencyWorkNeeded", label: "Emergency work needed", path: "damage.emergencyWorkNeeded", required: true, enabled: true },
 ];
 
 export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettingsModalProps) {
@@ -123,8 +112,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     fnolWebhookSecret: "",
   });
 
-  const [fnolFields, setFnolFields] = useState<FnolField[]>(DEFAULT_FNOL_FIELDS);
-
   useEffect(() => {
     if (client) {
       setFormData({
@@ -187,19 +174,9 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             : "",
           fnolWebhookSecret: "",
         });
-
-        if (client.integrations.fnolSchema?.fields) {
-          setFnolFields(client.integrations.fnolSchema.fields);
-        }
       }
     }
   }, [client]);
-
-  function toggleFnolField(key: string, field: "enabled" | "required") {
-    setFnolFields((prev) =>
-      prev.map((f) => (f.key === key ? { ...f, [field]: !f[field] } : f))
-    );
-  }
 
   async function handleSave() {
     setSaving(true);
@@ -257,7 +234,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         guidewirePayloadSchema: integrationSettings.guidewirePayloadSchema
           ? JSON.parse(integrationSettings.guidewirePayloadSchema)
           : undefined,
-        fnolSchema: { version: 1, fields: fnolFields.filter((f) => f.enabled) },
         fnolWebhookSecret: integrationSettings.fnolWebhookSecret || undefined,
       });
 
@@ -584,45 +560,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   </div>
                 </div>
               </section>
-
-              <Separator />
-
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <h3 className="text-lg font-semibold">FNOL Template</h3>
-                  <ChevronDown className="h-5 w-5" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4 space-y-2">
-                  {fnolFields.map((field) => (
-                    <div
-                      key={field.key}
-                      className="flex items-center justify-between p-3 rounded-md border"
-                    >
-                      <div>
-                        <p className="font-medium">{field.label}</p>
-                        <p className="text-xs text-muted-foreground">{field.path}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={field.enabled}
-                            onCheckedChange={() => toggleFnolField(field.key, "enabled")}
-                          />
-                          <span className="text-sm">Enabled</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={field.required}
-                            onCheckedChange={() => toggleFnolField(field.key, "required")}
-                            disabled={!field.enabled}
-                          />
-                          <span className="text-sm">Required</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
 
               <Separator />
 

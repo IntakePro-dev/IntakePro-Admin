@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Copy, Loader2, Check, X, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2, Check, X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -30,18 +30,6 @@ import {
   type TestReport,
 } from "@/lib/api/admin-api";
 import { toast } from "sonner";
-import type { FnolField } from "@/lib/types/client";
-
-const DEFAULT_FNOL_FIELDS: FnolField[] = [
-  { key: "caller.name", label: "Caller name", path: "caller.name", required: true, enabled: true },
-  { key: "caller.callbackNumber", label: "Callback number", path: "caller.callbackNumber", required: true, enabled: true },
-  { key: "policy.policyNumber", label: "Policy number", path: "policy.policyNumber", required: true, enabled: true },
-  { key: "loss.dateTime", label: "Date/time of incident", path: "loss.dateTime", required: true, enabled: true },
-  { key: "loss.address", label: "Address of loss", path: "loss.address", required: true, enabled: true },
-  { key: "loss.type", label: "Type of loss", path: "loss.type", required: true, enabled: true },
-  { key: "damage.summary", label: "Description / summary", path: "damage.summary", required: true, enabled: true },
-  { key: "damage.emergencyWorkNeeded", label: "Emergency work needed", path: "damage.emergencyWorkNeeded", required: true, enabled: true },
-];
 
 export default function IntegrationsPage() {
   const params = useParams();
@@ -50,7 +38,6 @@ export default function IntegrationsPage() {
   const updateIntegrations = useUpdateClientIntegrations(clientId);
 
   const [saving, setSaving] = useState(false);
-  const [fnolFields, setFnolFields] = useState<FnolField[]>(DEFAULT_FNOL_FIELDS);
 
   const [billing, setBilling] = useState({
     pricePerCall: 0.80,
@@ -112,10 +99,6 @@ export default function IntegrationsPage() {
     if (client?.integrations) {
       const i = client.integrations;
 
-      if (i.fnolSchema?.fields) {
-        setFnolFields(i.fnolSchema.fields);
-      }
-
       setBilling({
         pricePerCall: i.pricePerCall,
         baseMonthlyFee: i.baseMonthlyFee || 0,
@@ -173,23 +156,6 @@ export default function IntegrationsPage() {
         .catch(() => {});
     }
   }, [clientId]);
-
-  function toggleFnolField(key: string, field: "enabled" | "required") {
-    setFnolFields((prev) =>
-      prev.map((f) => (f.key === key ? { ...f, [field]: !f[field] } : f))
-    );
-  }
-
-  function copyFnolSpec() {
-    const spec = fnolFields.filter((f) => f.enabled).map((f) => ({
-      key: f.key,
-      label: f.label,
-      path: f.path,
-      required: f.required,
-    }));
-    navigator.clipboard.writeText(JSON.stringify(spec, null, 2));
-    toast.success("FNOL spec copied to clipboard");
-  }
 
   async function handleTestConnection() {
     setTestingConnection(true);
@@ -260,7 +226,6 @@ export default function IntegrationsPage() {
     setSaving(true);
     try {
       await updateIntegrations.mutateAsync({
-        fnolSchema: { version: 1, fields: fnolFields.filter((f) => f.enabled) },
         pricePerCall: billing.pricePerCall,
         baseMonthlyFee: billing.baseMonthlyFee || undefined,
         minimumMonthlyCharge: billing.minimumMonthlyCharge || undefined,
@@ -327,49 +292,6 @@ export default function IntegrationsPage() {
           <p className="text-muted-foreground">{client.name}</p>
         </div>
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>FNOL Expected Fields</CardTitle>
-            <CardDescription>Configure which fields the AI will collect</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={copyFnolSpec}>
-            <Copy className="mr-2 h-4 w-4" />
-            Copy Spec
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {fnolFields.map((field) => (
-            <div
-              key={field.key}
-              className="flex items-center justify-between p-3 rounded-md border"
-            >
-              <div>
-                <p className="font-medium">{field.label}</p>
-                <p className="text-xs text-muted-foreground">{field.path}</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={field.enabled}
-                    onCheckedChange={() => toggleFnolField(field.key, "enabled")}
-                  />
-                  <span className="text-sm">Enabled</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={field.required}
-                    onCheckedChange={() => toggleFnolField(field.key, "required")}
-                    disabled={!field.enabled}
-                  />
-                  <span className="text-sm">Required</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

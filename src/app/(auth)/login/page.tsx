@@ -17,7 +17,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const unauthorizedError = searchParams.get("error") === "unauthorized";
+  const errorParam = searchParams.get("error");
+  const unauthorizedError = errorParam === "unauthorized";
+  const sessionExpiredError = errorParam === "session_expired";
+  const sessionTimeoutError = errorParam === "session_timeout";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +36,9 @@ export default function LoginPage() {
         return;
       }
 
-      document.cookie = `admin_token=${result.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      const isProduction = process.env.NODE_ENV === "production";
+      const secureFlag = isProduction ? "; Secure" : "";
+      document.cookie = `admin_token=${result.token}; path=/; max-age=${60 * 60 * 24}; SameSite=Strict${secureFlag}`;
       router.push("/clients");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -53,10 +58,15 @@ export default function LoginPage() {
           <CardDescription>Sign in to access the admin panel</CardDescription>
         </CardHeader>
         <CardContent>
-          {(error || unauthorizedError) && (
+          {(error || unauthorizedError || sessionExpiredError || sessionTimeoutError) && (
             <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{error || "You don't have permission to access this area."}</span>
+              <span>
+                {error || 
+                  (sessionTimeoutError ? "Your session timed out due to inactivity. Please sign in again." :
+                  sessionExpiredError ? "Your session has expired. Please sign in again." :
+                  "You don't have permission to access this area.")}
+              </span>
             </div>
           )}
 

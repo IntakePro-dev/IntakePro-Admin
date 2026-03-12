@@ -12,10 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/contexts/theme-context";
+import { useSession } from "@/contexts/session-context";
+import { ActivityIndicator } from "@/components/layout/activity-indicator";
 
 export function Header() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { lastActivity } = useSession();
 
   function handleLogout() {
     document.cookie = "admin_token=; path=/; max-age=0";
@@ -24,7 +27,7 @@ export function Header() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <div />
+      <ActivityIndicator lastActivity={lastActivity} />
 
       <div className="flex items-center gap-2">
         <Button

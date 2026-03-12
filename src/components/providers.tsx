@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { SessionProvider } from "@/contexts/session-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -22,10 +23,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TooltipProvider>
-          {children}
-          <Toaster position="top-right" />
-        </TooltipProvider>
+        <SessionProvider>
+          <TooltipProvider>
+            {children}
+            <Toaster position="top-right" />
+          </TooltipProvider>
+        </SessionProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

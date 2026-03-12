@@ -54,7 +54,6 @@ export interface IntegrationSettings {
   minimumMonthlyCharge: number | null;
   implementationFee: number | null;
   freeTrialLimit: number | null;
-  fnolSchema: FnolSchema | null;
   fnolWebhookSecret?: string;
   twilioIncomingNumber: string | null;
   elevenlabsVoiceId: string | null;
@@ -84,20 +83,6 @@ export interface IntegrationSettings {
   qboConnected: boolean;
 }
 
-export interface FnolSchema {
-  version: number;
-  fields: FnolField[];
-}
-
-export interface FnolField {
-  key: string;
-  label: string;
-  path: string;
-  required: boolean;
-  enabled?: boolean;
-  custom?: boolean;
-}
-
 export interface CreateClientInput {
   name: string;
   legalName: string;
@@ -113,7 +98,6 @@ export interface CreateClientInput {
   bccRecipients?: string;
   brandColor?: string;
   logoUrl?: string;
-  fnolSchema?: FnolSchema;
   elevenlabsAgentId?: string;
   guidewireEndpoint?: string;
   guidewireApiToken?: string;
